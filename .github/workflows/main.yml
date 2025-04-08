@@ -21,6 +21,8 @@ jobs:
           npm install
       - name: List stacks
         run: cdk list
+        env:
+          region: eu-west-1
       - name: Synth Code
         run: |
           cdk synth
