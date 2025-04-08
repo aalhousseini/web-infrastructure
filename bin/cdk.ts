@@ -5,4 +5,9 @@ import { ApplicationStack } from "../lib/application-stack";
 
 const app = new cdk.App();
 new ApplicationStack(app, "ApplicationStack", {});
-new StaticSiteStack(app, "StaticSiteStack", {});
+new StaticSiteStack(app, "StaticSiteStack", {
+  env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION,
+  },
+});

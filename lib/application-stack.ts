@@ -1,8 +1,10 @@
-import { CfnOutput, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CfnOutput, Fn, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import {
+  Deployment,
   LambdaIntegration,
   LambdaRestApi,
   RestApi,
+  Stage,
 } from "aws-cdk-lib/aws-apigateway";
 import { AttributeType, TableClass, TableV2 } from "aws-cdk-lib/aws-dynamodb";
 import { Runtime, Function, Code } from "aws-cdk-lib/aws-lambda";
@@ -17,7 +19,7 @@ export class ApplicationStack extends Stack {
     const visitorFn = new Function(this, "Visitor-counter", {
       runtime: Runtime.PYTHON_3_11,
       handler: "visitor-count.handler",
-      code: Code.fromAsset(path.join(__dirname, "lambda/visitor-counter")),
+      code: Code.fromAsset(path.join(__dirname, "../lambda/visitor-counter")),
     });
 
     const visitortable = new TableV2(this, "VisitorTable", {
@@ -32,7 +34,16 @@ export class ApplicationStack extends Stack {
     });
 
     visitorFn.addEnvironment("VISITOR_TABLE", visitortable.tableName);
-    const api = new RestApi(this, "PortfolioAPI");
+    const api = new RestApi(this, "PortfolioAPI", {
+      defaultCorsPreflightOptions: {
+        allowOrigins: ["*"],
+        allowMethods: ["GET", "POST", "OPTIONS"],
+        allowHeaders: ["Content-Type", "Authorization"],
+      },
+      deployOptions: {
+        stageName: "prod",
+      },
+    });
 
     visitortable.grantReadWriteData(visitorFn);
 
@@ -47,8 +58,25 @@ export class ApplicationStack extends Stack {
     const projects = apiResource.addResource("projects");
     projects.addMethod("GET");
 
+    const projectsTable = new TableV2(this, "Projects-Table", {
+      partitionKey: { name: "id", type: AttributeType.STRING },
+      contributorInsights: true,
+      tableClass: TableClass.STANDARD_INFREQUENT_ACCESS,
+      //remove this line to use the default table class
+      removalPolicy: RemovalPolicy.DESTROY,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: true,
+      },
+    });
+
+    const projectsFn = new Function(this, "Projects-Lambda", {
+      runtime: Runtime.PYTHON_3_11,
+      handler: "visitor-count.handler",
+      code: Code.fromAsset(path.join(__dirname, "../lambda/visitor-counter")),
+    });
+
     new CfnOutput(this, "ApiEndpoint", {
-      value: `${api.url}`,
+      value: Fn.select(2, Fn.split("/", api.url)),
       exportName: "ApiEndpoint",
     });
   }

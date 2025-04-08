@@ -16,8 +16,9 @@ import {
 import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
 import { HttpOrigin, S3Origin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { Key } from "aws-cdk-lib/aws-kms";
-import * as iam from "aws-cdk-lib/aws-iam";
-
+import { HostedZone } from "aws-cdk-lib/aws-route53";
+import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 export class StaticSiteStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -27,6 +28,20 @@ export class StaticSiteStack extends cdk.Stack {
       alias: "portfolio-key",
       description: "KMS key for encrypting S3 bucket",
     });
+
+    const zone = HostedZone.fromLookup(this, "Zone", {
+      domainName: "ahousseini.dev",
+    });
+    const certArn = ssm.StringParameter.valueForStringParameter(
+      this,
+      "ACM_CERTIFICATE"
+    );
+
+    const certificate = Certificate.fromCertificateArn(
+      this,
+      "PortfolioCertificate",
+      certArn
+    );
 
     const accessLogsBucket = new Bucket(this, "AccessLogsBucket", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -52,41 +67,37 @@ export class StaticSiteStack extends cdk.Stack {
       originAccessIdentity: oai,
     });
 
-    const accessLogsBucketForCloudFront = new Bucket(
-      this,
-      "AccessLogsBucketForCloudFront",
-      {
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-        blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-      }
-    );
-
-    const apiHostname = cdk.Fn.select(
-      2,
-      cdk.Fn.split("/", cdk.Fn.importValue("ApiEndpoint"))
-    );
+    const apiHostname = cdk.Fn.importValue("ApiEndpoint");
 
     const distribution = new Distribution(this, "MyDistribution", {
       defaultBehavior: {
         origin: origin,
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        allowedMethods: AllowedMethods.ALLOW_ALL,
+        cachePolicy: CachePolicy.CACHING_OPTIMIZED,
       },
       defaultRootObject: "index.html",
-      logBucket: accessLogsBucketForCloudFront,
-      logFilePrefix: "cloudfront-logs/",
+      domainNames: ["ahousseini.dev"],
+      certificate: certificate,
     });
 
-    distribution.addBehavior("/api/*", new HttpOrigin(apiHostname), {
-      allowedMethods: AllowedMethods.ALLOW_ALL,
-      cachePolicy: CachePolicy.CACHING_DISABLED,
-      originRequestPolicy: OriginRequestPolicy.ALL_VIEWER,
-    });
+    distribution.addBehavior(
+      "/api/*",
+      new HttpOrigin(apiHostname, {
+        originPath: "/prod",
+      }),
+      {
+        allowedMethods: AllowedMethods.ALLOW_ALL,
+        cachePolicy: CachePolicy.CACHING_DISABLED,
+        originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      }
+    );
 
     new BucketDeployment(this, "DeployWebsite", {
       destinationBucket: websiteBucket,
       sources: [Source.asset("../portfolio/out")],
       distribution,
-      distributionPaths: ["/*"],
+      distributionPaths: ["/*", "/api/*"],
     });
 
     new cdk.CfnOutput(this, "CloudFrontURL", {
