@@ -55,14 +55,10 @@ export class ApplicationStack extends Stack {
     visitorCount.addMethod("GET", new LambdaIntegration(visitorFn));
     visitorCount.addMethod("POST", new LambdaIntegration(visitorFn));
 
-    const projects = apiResource.addResource("projects");
-    projects.addMethod("GET");
-
     const projectsTable = new TableV2(this, "Projects-Table", {
       partitionKey: { name: "id", type: AttributeType.STRING },
       contributorInsights: true,
       tableClass: TableClass.STANDARD_INFREQUENT_ACCESS,
-      //remove this line to use the default table class
       removalPolicy: RemovalPolicy.DESTROY,
       pointInTimeRecoverySpecification: {
         pointInTimeRecoveryEnabled: true,
@@ -71,9 +67,15 @@ export class ApplicationStack extends Stack {
 
     const projectsFn = new Function(this, "Projects-Lambda", {
       runtime: Runtime.PYTHON_3_11,
-      handler: "visitor-count.handler",
-      code: Code.fromAsset(path.join(__dirname, "../lambda/visitor-counter")),
+      handler: "projects-adder.handler",
+      code: Code.fromAsset(path.join(__dirname, "../lambda/projects")),
     });
+
+    projectsFn.addEnvironment("PROJECTS_TABLE", projectsTable.tableName);
+
+    const projects = apiResource.addResource("projects");
+    projects.addMethod("GET", new LambdaIntegration(projectsFn));
+    projects.addMethod("POST", new LambdaIntegration(projectsFn));
 
     new CfnOutput(this, "ApiEndpoint", {
       value: Fn.select(2, Fn.split("/", api.url)),
