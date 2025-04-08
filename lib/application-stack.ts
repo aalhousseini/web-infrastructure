@@ -71,6 +71,8 @@ export class ApplicationStack extends Stack {
       code: Code.fromAsset(path.join(__dirname, "../lambda/projects")),
     });
 
+    projectsTable.grantReadWriteData(projectsFn);
+
     projectsFn.addEnvironment("PROJECTS_TABLE", projectsTable.tableName);
 
     const projects = apiResource.addResource("projects");
