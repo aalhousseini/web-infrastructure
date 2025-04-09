@@ -1,0 +1,10 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - npm install -g aws-cdk
+      - npm ci
+    build:
+      commands:
+        - cdk list
+        - cdk synth

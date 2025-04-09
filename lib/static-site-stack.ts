@@ -93,12 +93,12 @@ export class StaticSiteStack extends cdk.Stack {
       }
     );
 
-    new BucketDeployment(this, "DeployWebsite", {
-      destinationBucket: websiteBucket,
-      sources: [Source.asset("../portfolio/out")],
-      distribution,
-      distributionPaths: ["/*", "/api/*"],
-    });
+    // new BucketDeployment(this, "DeployWebsite", {
+    //   destinationBucket: websiteBucket,
+    //   sources: [Source.asset("../portfolio/out")],
+    //   distribution,
+    //   distributionPaths: ["/*", "/api/*"],
+    // });
 
     new cdk.CfnOutput(this, "CloudFrontURL", {
       value: `https://${distribution.distributionDomainName}`,
