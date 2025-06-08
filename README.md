@@ -1,14 +1,67 @@
-# Welcome to your CDK TypeScript project
+# Web Infrastructure – Personal Portfolio Architecture
 
-This is a blank project for CDK development with TypeScript.
+This project defines the cloud infrastructure for my personal website hosting, built entirely on AWS using a serverless architecture.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+---
 
-## Useful commands
+## 🗺️ Architecture Diagram
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+![Architecture Overview](docs/architecture.png)
+
+## 🌐 Domain
+
+- **Domain**: `ahousseini.dev` (registered via GoDaddy)
+- **DNS**: Managed using **Amazon Route 53**
+- **TLS**: Certificate provisioned via **AWS Certificate Manager (ACM)** and attached to CloudFront
+
+---
+
+## 🗂️ Static Hosting
+
+- **Frontend**: HTML/CSS static website hosted on **Amazon S3**
+- **CV Hosting**: Stored in a separate S3 bucket; updated automatically via GitHub Actions
+
+---
+
+## 🚀 Content Delivery
+
+- **Amazon CloudFront**:
+  - Serves both the portfolio and CV securely over HTTPS
+  - Distributes content globally with low latency
+  - Caches responses; invalidated on new deployments via GitHub Action
+
+---
+
+## ⚙️ Backend APIs
+
+- **Amazon API Gateway** handles API requests from the frontend
+- **AWS Lambda**:
+  - One function tracks **visitor counts**
+  - Another manages **CRUD operations** for project listings
+- **Amazon DynamoDB** is used for persistent storage of analytics and project data
+
+---
+
+## 🔄 Automation
+
+- **GitHub Actions**:
+  - On push, the updated CV is uploaded to the CV S3 bucket
+  - Triggers CloudFront cache invalidation to reflect the new content
+
+---
+
+## 📌 Region
+
+- All AWS resources are deployed in **eu-central-1 (Frankfurt)**  
+  *(except ACM for CloudFront, which requires us-east-1)*
+
+---
+
+## 🧱 Summary
+
+This setup provides:
+
+- A scalable, low-maintenance, and secure web presence
+- Instant content updates through GitHub CI/CD
+- Real-time backend functionality without server management
+
