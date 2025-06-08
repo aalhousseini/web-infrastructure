@@ -6,7 +6,7 @@ This project defines the cloud infrastructure for my personal website hosting, b
 
 ## 🗺️ Architecture Diagram
 
-![Architecture Overview](architecture.png)
+![Architecture Overview](Architecture.png)
 
 ## 🌐 Domain
 
